@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Court Fetcher — PDF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- ✅ This file now exists (server creates it on startup) -->
+  <link rel="icon" href="/downloads/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f1733; --text:#e5e7eb; --muted:#9aa4bd;
+      --border:#1e2a45; --primary:#60a5fa; --primary2:#3b82f6;
+      --ok:#22c55e; --err:#ef4444; --chip:#111a38; --ring:#1d4ed8;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:14px/1.5 Inter,system-ui,Arial; color:var(--text);
+      background:radial-gradient(1000px 600px at 90% -10%,rgba(59,130,246,.12),transparent),
+                 radial-gradient(900px 500px at -10% 100%,rgba(99,102,241,.10),transparent),
+                 var(--bg);
+    }
+    .shell{display:grid; grid-template-columns:260px 1fr; height:100vh}
+    .sidebar{border-right:1px solid var(--border); padding:16px; overflow:auto; background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0))}
+    .main{display:grid; grid-template-rows:auto 1fr; min-width:0}
+    header{display:flex; align-items:center; gap:12px; padding:12px 18px; border-bottom:1px solid var(--border); backdrop-filter:saturate(150%) blur(6px); background:rgba(11,16,32,.6); position:sticky; top:0; z-index:10}
+    .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(180deg,#60a5fa,#3b82f6)}
+    .grow{flex:1}
+    .link{color:var(--muted); text-decoration:none; padding:6px 10px; border:1px solid var(--border); border-radius:8px}
+    .wrap{padding:18px; overflow:auto}
+    .grid{display:grid; grid-template-columns:420px 1fr; gap:16px}
+    @media (max-width:1100px){ .shell{grid-template-columns:1fr} .grid{grid-template-columns:1fr} .sidebar{display:none} }
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 10px; font-size:16px}
+    label{display:block; margin:10px 0 6px; color:#cdd6ea; font-weight:600}
+    input,select,button{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#0c1228; color:#e5e7eb; outline:none}
+    input:focus,select:focus{border-color:var(--ring); box-shadow:0 0 0 4px rgba(29,78,216,.25)}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .btn{background:linear-gradient(180deg,var(--primary),var(--primary2)); border:none; font-weight:600; cursor:pointer}
+    .ghost{background:#0c1228}
+    .muted{color:var(--muted)}
+    .badge{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; background:var(--chip); border:1px solid var(--border); font-size:12px}
+    .kv{display:grid; grid-template-columns:160px 1fr; gap:8px}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px">
+        <div class="logo"></div><div style="font-weight:600">Court Fetcher</div>
+      </div>
+      <a class="link" href="/docs" target="_blank">API Docs ↗</a>
+    </aside>
+
+    <section class="main">
+      <header>
+        <div class="logo"></div>
+        <div style="font-weight:600">Search Cases</div>
+      </header>
+
+      <div class="wrap">
+        <div class="grid">
+          <div class="card">
+            <h2>Lookup</h2>
+            <label>Case Type</label>
+            <input id="case_type" placeholder="CIVIL" />
+            <div class="row">
+              <div>
+                <label>Case Number</label>
+                <input id="case_number" type="number" placeholder="7149" />
+              </div>
+              <div>
+                <label>Year</label>
+                <input id="year" type="number" value="2024" />
+              </div>
+            </div>
+            <label>Court Level</label>
+            <select id="court_level"><option>HC</option><option>DC</option></select>
+            <div class="row" style="margin-top:12px">
+              <button id="lookup" class="btn">Lookup Case</button>
+              <button id="ping" class="ghost">Ping</button>
+            </div>
+            <p class="muted" style="margin-top:10px">Backend: <code id="backendUrl"></code></p>
+          </div>
+
+          <div style="display:grid; gap:16px">
+            <div class="card">
+              <h2>Status</h2>
+              <div class="badge"><span id="statusDot">●</span> <span id="statusText" class="muted">No request yet</span></div>
+              <div id="errBox" class="muted" style="margin-top:10px; display:none"></div>
+            </div>
+
+            <div class="card">
+              <h2>Details</h2>
+              <div id="details" class="kv">
+                <div>Parties</div><div id="parties" class="muted">—</div>
+                <div>Filing Date</div><div id="fdate" class="muted">—</div>
+                <div>Next Hearing</div><div id="nhearing" class="muted">—</div>
+                <div>Status</div><div id="cstatus" class="muted">—</div>
+                <div>Source</div><div id="source" class="muted">—</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Documents</h2>
+              <div style="display:flex; gap:10px; margin-bottom:10px">
+                <button id="dlpdf" class="ghost" style="width:auto">⬇️ Download Judgment PDF</button>
+              </div>
+              <div id="docs" class="muted">No documents yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const API = window.location.origin;
+  document.getElementById("backendUrl").textContent = API;
+  const setText = (id, t) => (document.getElementById(id).textContent = t ?? "—");
+
+  document.getElementById("ping").onclick = async () => {
+    try {
+      const r = await fetch(`${API}/ping`);
+      const j = await r.json();
+      setText("statusText", "Server OK ✅");
+      document.getElementById("statusDot").style.color = "var(--ok)";
+      console.log(j);
+    } catch {
+      setText("statusText", "Server Error ❌");
+      document.getElementById("statusDot").style.color = "var(--err)";
+    }
+  };
+
+  document.getElementById("lookup").onclick = async () => {
+    const body = {
+      case_type: document.getElementById("case_type").value || "CIVIL",
+      case_number: parseInt(document.getElementById("case_number").value) || 7149,
+      year: parseInt(document.getElementById("year").value) || 2024,
+      court_level: document.getElementById("court_level").value || "HC",
+    };
+
+    document.getElementById("statusText").textContent = "Loading...";
+    document.getElementById("statusDot").style.color = "var(--muted)";
+    document.getElementById("errBox").style.display = "none";
+
+    try {
+      const res = await fetch(`${API}/cases/lookup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      const p = data.parsed || {};
+
+      setText("parties", p.parties);
+      setText("fdate", p.filing_date);
+      setText("nhearing", p.next_hearing);
+      setText("cstatus", p.status);
+      setText("source", (p.raw_source || {}).url || "N/A");
+
+      const ok = p.status && p.status !== "Error";
+      document.getElementById("statusText").textContent = ok ? "Success ✅" : "Error ❌";
+      document.getElementById("statusDot").style.color = ok ? "var(--ok)" : "var(--err)";
+
+      const docs = (data.documents || []).filter(d => d.kind === "judgment");
+      if (docs.length) {
+        const d = docs[0];
+        document.getElementById("docs").innerHTML = `
+          <a href="/dl/file/${encodeURIComponent(d.file_name)}" download>
+            ⬇️ ${d.file_name}
+          </a>
+          &nbsp;<small class="muted">|</small>&nbsp;
+          <a href="/downloads/${encodeURIComponent(d.file_name)}" target="_blank" rel="noopener">Open</a>
+        `;
+      } else {
+        document.getElementById("docs").textContent = "No PDF generated";
+      }
+    } catch (err) {
+      document.getElementById("statusText").textContent = "Request failed ❌";
+      document.getElementById("statusDot").style.color = "var(--err)";
+      document.getElementById("errBox").textContent = err.message || "Error";
+      document.getElementById("errBox").style.display = "block";
+    }
+  };
+
+  // Direct single PDF download (even before lookup)
+  document.getElementById("dlpdf").onclick = () => {
+    let num = parseInt(document.getElementById("case_number").value, 10);
+    if (!Number.isFinite(num) || num <= 0) num = 7149;
+    window.location.href = `${API}/dl/file/judgment_${num}.pdf`;
+  };
+</script>
+
+</body>
+</html>
